@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer'); // NEW: Handles file uploads
 
 const app = express();
 const server = http.createServer(app);
@@ -10,7 +11,14 @@ const io = new Server(server);
 
 // --- CONFIGURATION ---
 const DB_FILE = 'screens.json';
+const UPLOAD_DIR = path.join(__dirname, '../public/uploads'); // Store files here
 let screens = [];
+
+// --- SETUP: ENSURE DIRECTORIES EXIST ---
+// Create the uploads folder if it doesn't exist yet
+if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
 
 // --- PERSISTENCE: LOAD DATA ---
 if (fs.existsSync(DB_FILE)) {
@@ -33,22 +41,45 @@ const saveDB = () => {
 };
 
 const broadcastScreenList = () => {
-    // Send the list of screens to Admin and Dashboard
     io.emit('update_screen_list', screens);
 };
+
+// --- UPLOAD ENGINE (MULTER) ---
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+        // Keep original extension (e.g. .mp4, .png) but make filename unique
+        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
+        cb(null, uniqueName);
+    }
+});
+const upload = multer({ storage: storage });
 
 // --- SERVE STATIC FILES ---
 app.use(express.static(path.join(__dirname, '../public')));
 
+// --- HTTP ROUTES ---
+
+// 1. UPLOAD ENDPOINT
+// The Admin page will POST files here. We save them, then return the URL.
+app.post('/api/upload', upload.single('media'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file received" });
+    
+    // The file is saved in 'public/uploads', so the URL is just '/uploads/filename'
+    const fileUrl = `/uploads/${req.file.filename}`;
+    
+    console.log(`[UPLOAD] Saved new media: ${fileUrl}`);
+    res.json({ url: fileUrl });
+});
+
 // --- SOCKET LOGIC ---
 io.on('connection', (socket) => {
     
-    // 1. REGISTER SCREEN (The "Handshake")
+    // 1. REGISTER SCREEN
     socket.on('register_screen', (deviceId) => {
         let screen = screens.find(s => s.deviceId === deviceId);
 
         if (!screen) {
-            // New Screen: Create it
             const code = Math.floor(100000 + Math.random() * 900000).toString();
             screen = {
                 deviceId: deviceId,    
@@ -59,18 +90,13 @@ io.on('connection', (socket) => {
                 lastContent: null      
             };
             screens.push(screen);
-            console.log(`[NEW] Screen detected: ${deviceId}`);
             saveDB();
         } else {
-            // Existing Screen: Update socket connection
             screen.socketId = socket.id;
-            console.log(`[RECONNECT] ${screen.name}`);
         }
 
-        // Send status back to screen
         if (screen.isPaired) {
             socket.emit('paired_success', { name: screen.name });
-            // Restore content if it exists
             if (screen.lastContent) {
                 socket.emit('update_content', screen.lastContent);
             }
@@ -81,7 +107,7 @@ io.on('connection', (socket) => {
         broadcastScreenList();
     });
 
-    // 2. ADMIN PAIRING
+    // 2. ADMIN PAIRING (CREATE/UPDATE)
     socket.on('admin_pair', ({ code, name }) => {
         const screen = screens.find(s => s.pairingCode == code);
         if (screen) {
@@ -95,53 +121,123 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 3. PUSH CONTENT
-    socket.on('push_content', ({ targetId, content }) => {
-        // targetId comes from the dropdown (socketId)
-        const screen = screens.find(s => s.socketId === targetId);
-        
+    // 3. ADMIN RENAME (UPDATE)
+    socket.on('admin_rename_screen', ({ socketId, newName }) => {
+        const screen = screens.find(s => s.socketId === socketId);
         if (screen) {
-            io.to(screen.socketId).emit('update_content', content);
-            
-            // Save state so it persists on reboot
-            screen.lastContent = content;
+            screen.name = newName;
+            io.to(screen.socketId).emit('paired_success', { name: newName });
             saveDB();
-
-            socket.emit('admin_log', `Sent content to ${screen.name}`);
-        } else {
-            socket.emit('admin_log', `Error: Target screen not found`);
+            socket.emit('admin_log', `Renamed screen to ${newName}`);
         }
     });
 
-    // 4. CLI COMMANDS
-    socket.on('cli_command', (cmd) => {
-        const parts = cmd.split(' ');
-        const command = parts[0];
+    // 4. ADMIN DELETE (DELETE)
+    socket.on('admin_delete_screen', (socketId) => {
+        const index = screens.findIndex(s => s.socketId === socketId);
+        if (index !== -1) {
+            const screen = screens[index];
+            // Tell the screen it is no longer paired (optional, forces it to show code)
+            io.to(screen.socketId).emit('show_pairing_code', screen.pairingCode); // Reset screen UI
+            
+            // Remove from array
+            screens.splice(index, 1);
+            saveDB();
+            socket.emit('admin_log', `Deleted screen: ${screen.name}`);
+        }
+    });
 
-        if (command === 'refresh') {
-            const targetId = parts[1];
-            if (targetId) {
-                 io.to(targetId).emit('force_refresh');
-                 socket.emit('cli_response', `Refreshed ${targetId}`);
-            } else {
-                 io.emit('force_refresh');
-                 socket.emit('cli_response', "Broadcasted global refresh.");
-            }
-        } else if (command === 'list') {
-            const list = screens.map(s => `${s.name} [${s.isPaired ? 'PAIRED' : 'NEW'}]`).join('\n');
-            socket.emit('cli_response', list);
-        } else {
-            socket.emit('cli_response', "Unknown command.");
+    // 5. PUSH CONTENT
+    socket.on('push_content', ({ targetId, content }) => {
+        const screen = screens.find(s => s.socketId === targetId);
+        if (screen) {
+            io.to(screen.socketId).emit('update_content', content);
+            screen.lastContent = content;
+            saveDB();
+            socket.emit('admin_log', `Sent content to ${screen.name}`);
+        }
+    });
+
+    // 6. CLI COMPENDIUM (RESTORED & EXPANDED)
+    socket.on('cli_command', (cmdString) => {
+        // Basic parser: "say 123 hello world" -> cmd="say", arg1="123", rest="hello world"
+        const parts = cmdString.trim().split(' ');
+        const cmd = parts[0].toLowerCase();
+        const arg1 = parts[1];
+        const rest = parts.slice(2).join(' ');
+
+        switch (cmd) {
+            case 'help':
+                socket.emit('cli_response', 
+`=== COMMAND COMPENDIUM ===
+list              : Show all connected screens
+refresh [id|all]  : Reload the browser on target
+identify [id]     : Flash screen to identify
+say [id] [msg]    : Send text alert to screen
+wipe [id]         : Unpair and delete screen
+help              : Show this menu`);
+                break;
+
+            case 'list':
+                if (screens.length === 0) {
+                    socket.emit('cli_response', "No screens connected.");
+                } else {
+                    const output = screens.map(s => 
+                        `[${s.socketId}] ${s.name} (${s.isPaired ? 'ONLINE' : 'PENDING'})`
+                    ).join('\n');
+                    socket.emit('cli_response', output);
+                }
+                break;
+
+            case 'refresh':
+                if (arg1 === 'all' || !arg1) {
+                    io.emit('force_refresh');
+                    socket.emit('cli_response', "Broadcasted GLOBAL REFRESH.");
+                } else {
+                    io.to(arg1).emit('force_refresh');
+                    socket.emit('cli_response', `Refreshed target: ${arg1}`);
+                }
+                break;
+            
+            case 'identify':
+                if (arg1) {
+                    // Send a visual signal (Client needs to handle 'identify' event)
+                    io.to(arg1).emit('identify'); 
+                    socket.emit('cli_response', `Sent ID signal to ${arg1}`);
+                } else {
+                    socket.emit('cli_response', "Usage: identify [socketId]");
+                }
+                break;
+
+            case 'say':
+                if (arg1 && rest) {
+                     io.to(arg1).emit('show_alert', rest); 
+                     socket.emit('cli_response', `Sent message to ${arg1}`);
+                } else {
+                    socket.emit('cli_response', "Usage: say [socketId] [message]");
+                }
+                break;
+                
+             case 'wipe':
+                const index = screens.findIndex(s => s.socketId === arg1);
+                if (index !== -1) {
+                    const s = screens[index];
+                    io.to(s.socketId).emit('show_pairing_code', s.pairingCode);
+                    screens.splice(index, 1);
+                    saveDB();
+                    socket.emit('cli_response', `Deleted screen: ${s.name}`);
+                } else {
+                    socket.emit('cli_response', "Screen ID not found.");
+                }
+                break;
+
+            default:
+                socket.emit('cli_response', `Unknown command: ${cmd}. Type 'help' for options.`);
         }
     });
 });
 
 const PORT = 3000;
 server.listen(PORT, () => {
-    console.log('---------------------------------------');
-    console.log(`  ESPORTS SIGNAGE SYSTEM v1.0`);
-    console.log(`  Server running on Port ${PORT}`);
-    console.log(`  Admin: http://localhost:${PORT}/admin.html`);
-    console.log(`  Display: http://localhost:${PORT}/receiver.html`);
-    console.log('---------------------------------------');
+    console.log(`Server running on Port ${PORT}`);
 });

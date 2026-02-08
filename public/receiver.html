@@ -4,30 +4,45 @@
     <title>Signage Player</title>
     <style>
         body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        #app { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        #app { width: 100vw; height: 100vh; position: relative; }
         
-        /* Pairing Code Styles */
+        /* Pairing & System UI */
+        .system-msg { 
+            position: absolute; top:0; left:0; width:100%; height:100%; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            background: #000; z-index: 999;
+        }
         .code-box { text-align: center; animation: pulse 3s infinite; }
         .code { font-size: 8rem; font-weight: 900; letter-spacing: 15px; color: #00ffcc; text-shadow: 0 0 30px rgba(0,255,204,0.5); }
         h2 { text-transform: uppercase; letter-spacing: 5px; color: #888; margin-bottom: 20px; }
-        
-        /* Fullscreen Content */
+        .error-box { border: 2px solid red; padding: 20px; background: #200; text-align: center; }
+
+        /* Content Styles */
+        .slide-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         iframe { width: 100%; height: 100%; border: none; }
-        img { width: 100%; height: 100%; object-fit: contain; }
+        img { width: 100%; height: 100%; object-fit: contain; background: black; }
 
         @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div id="app"><h1>Booting System...</h1></div>
+    <div id="app">
+        <div class="system-msg"><h1>Booting System...</h1></div>
+    </div>
 
     <script>
-        const socket = io();
         const app = document.getElementById('app');
-        let slideInterval;
+        
+        if (typeof io === 'undefined') {
+            app.innerHTML = `<div class="system-msg"><div class="error-box"><h1>SYSTEM ERROR</h1><p>Socket.io not found.</p><p>Use http://localhost:3000</p></div></div>`;
+            throw new Error("Socket.io missing");
+        }
 
-        // --- IDENTITY MANAGEMENT ---
+        const socket = io();
+        let playTimer; 
+
+        // --- HELPER: IDENTITY ---
         const getDeviceId = () => {
             let id = localStorage.getItem('signage_deviceId');
             if (!id) {
@@ -37,51 +52,124 @@
             return id;
         };
 
-        // --- CONNECTION ---
+        // --- SOCKET EVENTS ---
         socket.on('connect', () => {
-            const myId = getDeviceId();
-            console.log("Registered as:", myId);
-            socket.emit('register_screen', myId);
+            socket.emit('register_screen', getDeviceId());
         });
 
-        // --- PAIRING MODE ---
         socket.on('show_pairing_code', (code) => {
-            if (slideInterval) clearInterval(slideInterval);
-            app.innerHTML = `<div class="code-box"><h2>System Pairing Code</h2><div class="code">${code}</div></div>`;
+            clearPlaylist();
+            app.innerHTML = `<div class="system-msg"><div class="code-box"><h2>Pairing Code</h2><div class="code">${code}</div></div></div>`;
         });
 
         socket.on('paired_success', (data) => {
-            app.innerHTML = `<h1>Connected: ${data.name}</h1>`;
+            clearPlaylist();
+            app.innerHTML = `<div class="system-msg"><h1>Connected: ${data.name}</h1><h3>Waiting for Content...</h3></div>`;
         });
 
-        // --- CONTENT ENGINE ---
-        socket.on('update_content', (data) => {
-            if (slideInterval) clearInterval(slideInterval);
-            app.innerHTML = ''; 
-
-            if (data.type === 'html') {
-                app.innerHTML = data.payload;
-            } 
-            else if (data.type === 'url') {
-                app.innerHTML = `<iframe src="${data.payload}"></iframe>`;
-            }
-            else if (data.type === 'slideshow') {
-                const images = data.payload;
-                let index = 0;
-                
-                const showSlide = () => {
-                    // Simple fade transition by replacing HTML
-                    app.innerHTML = `<img src="${images[index]}" style="background:black;">`;
-                    index = (index + 1) % images.length;
-                };
-
-                showSlide();
-                slideInterval = setInterval(showSlide, 5000); // 5 Seconds per slide
-            }
+        // --- CLI COMMAND HANDLERS ---
+        socket.on('identify', () => {
+            const id = getDeviceId();
+            const el = document.createElement('div');
+            el.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; border: 20px solid red; z-index:9999; display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.8); color:red; font-size:5rem; font-weight:bold;";
+            el.innerText = "ID: " + id;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 5000);
         });
-        
-        // --- REMOTE COMMANDS ---
+
+        socket.on('show_alert', (msg) => {
+            const el = document.createElement('div');
+            el.style.cssText = "position:fixed; bottom:50px; left:50%; transform:translateX(-50%); background:red; color:white; padding:20px 50px; font-size:2rem; border-radius:10px; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:sans-serif; text-transform:uppercase; letter-spacing:2px;";
+            el.innerText = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 10000);
+        });
+
         socket.on('force_refresh', () => location.reload());
+
+        // --- THE PLAYLIST ENGINE ---
+        socket.on('update_content', (data) => {
+            let playlist = [];
+            if (data.type === 'playlist') {
+                playlist = data.payload;
+            } else if (data.type === 'slideshow') {
+                playlist = data.payload.map(url => ({ type: 'image', content: url, duration: 5000 }));
+            } else {
+                playlist = [{ type: data.type, content: data.payload, duration: 999999 }];
+            }
+            startPlaylist(playlist);
+        });
+
+        function clearPlaylist() {
+            if (playTimer) clearTimeout(playTimer);
+            app.innerHTML = '';
+        }
+
+        function startPlaylist(playlist) {
+            clearPlaylist();
+            let index = 0;
+
+            const runSlide = () => {
+                const slide = playlist[index];
+                app.innerHTML = ''; 
+
+                const container = document.createElement('div');
+                container.className = 'slide-container';
+
+                // Render Content
+                let isVideo = false;
+
+                if (slide.type === 'image') {
+                    // Check if it's a video (simple check for extension)
+                    if(slide.content.match(/\.(mp4|webm)$/i)) {
+                         isVideo = true;
+                         // Don't auto-loop if we are controlling flow via 'ended' event
+                         const loopAttr = (slide.duration === -1) ? '' : 'loop';
+                         container.innerHTML = `<video src="${slide.content}" autoplay muted ${loopAttr} style="width:100%; height:100%; object-fit:cover;"></video>`;
+                    } else {
+                         container.innerHTML = `<img src="${slide.content}">`;
+                    }
+                } else if (slide.type === 'url') {
+                    container.innerHTML = `<iframe src="${slide.content}"></iframe>`;
+                } else if (slide.type === 'html') {
+                    container.innerHTML = slide.content;
+                }
+
+                app.appendChild(container);
+
+                // --- SCHEDULING NEXT SLIDE ---
+                if (playlist.length > 1) {
+                    const nextIndex = (index + 1) % playlist.length;
+                    
+                    // CASE 1: AUTO / LOOP AT END (Videos)
+                    if (slide.duration === -1 && isVideo) {
+                        const videoEl = container.querySelector('video');
+                        if(videoEl) {
+                            videoEl.onended = () => {
+                                index = nextIndex;
+                                runSlide();
+                            };
+                            // Fail-safe: if video fails to load/play, move on after 10s
+                            // setTimeout(() => { if(index !== nextIndex) runSlide(); }, 10000);
+                            return; // Stop here, wait for event
+                        }
+                    }
+
+                    // CASE 2: AUTO (Images/HTML - Default to 10s)
+                    let duration = slide.duration;
+                    if (duration === -1) duration = 10000; 
+
+                    // CASE 3: FOREVER (Do nothing)
+                    if (duration >= 9999990) return;
+
+                    // CASE 4: STANDARD TIMER
+                    index = nextIndex;
+                    playTimer = setTimeout(runSlide, duration);
+                }
+            };
+
+            runSlide();
+        }
     </script>
 </body>
 </html>
