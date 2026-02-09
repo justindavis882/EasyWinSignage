@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Signage Studio</title>
+    <title>MJHS Studio</title>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    
     <style>
-        :root { --bg: #121212; --panel: #1e1e1e; --accent: #0066cc; --border: #333; --text: #eee; }
+        :root { --bg: #1a1a1a; --panel: #252525; --accent: #2980b9; --accent-hover: #3498db; --border: #333; --text: #ecf0f1; }
         
         body { 
             background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; 
@@ -14,211 +16,306 @@
 
         /* HEADER */
         header { 
-            height: 60px; background: var(--panel); border-bottom: 1px solid var(--border); 
-            display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+            height: 70px; background: #000; border-bottom: 1px solid var(--border); 
+            display: flex; align-items: center; justify-content: space-between; padding: 0 30px;
         }
-        .brand { font-weight: 800; letter-spacing: 1px; color: #fff; }
-        .controls { display: flex; gap: 10px; }
+        .brand { font-weight: 800; font-size: 1.2rem; color: #fff; letter-spacing: 1px; }
+        .brand span { color: #f1c40f; }
 
-        /* LAYOUT */
-        .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
+        /* MAIN LAYOUT */
+        .workspace { display: flex; flex: 1; overflow: hidden; }
         
-        /* SIDEBAR (Timeline) */
-        .sidebar { width: 350px; background: #181818; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .sidebar-header { padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: #888; text-transform: uppercase; }
+        /* SIDEBAR (Visual Playlist) */
+        .sidebar { width: 320px; background: #111; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; font-weight: 600; color: #7f8c8d; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
         
-        #slide-list { flex: 1; overflow-y: auto; padding: 10px; }
+        #slide-list { flex: 1; overflow-y: auto; padding: 15px; }
         
-        .slide-item { 
-            background: var(--panel); border: 1px solid var(--border); padding: 10px; margin-bottom: 10px; 
-            border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px;
-            transition: all 0.2s;
+        .slide-card { 
+            background: var(--panel); border: 2px solid transparent; margin-bottom: 12px; 
+            border-radius: 8px; cursor: pointer; overflow: hidden; transition: all 0.2s;
+            display: flex; height: 70px;
         }
-        .slide-item:hover { border-color: #555; }
-        .slide-item.active { border-color: var(--accent); background: #1a2633; }
-        .handle { cursor: grab; color: #555; font-size: 1.2rem; }
-        .slide-info { flex: 1; }
-        .slide-type { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #888; }
-        .slide-title { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-        .slide-dur { font-size: 0.75rem; color: var(--accent); }
-
-        .add-buttons { padding: 15px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .add-btn { background: #333; border: none; color: #ccc; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
-        .add-btn:hover { background: #444; color: white; }
-
-        /* MAIN EDITOR */
-        .editor { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; background: #0a0a0a; overflow-y: auto; }
-        .editor-card { width: 100%; max-width: 600px; background: var(--panel); padding: 30px; border-radius: 8px; border: 1px solid var(--border); }
+        .slide-card:hover { border-color: #555; transform: translateX(2px); }
+        .slide-card.active { border-color: var(--accent); background: #2c3e50; }
         
-        /* FORM ELEMENTS */
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-size: 0.8rem; color: #888; text-transform: uppercase; }
-        input, textarea, select { 
-            width: 100%; padding: 12px; background: #111; border: 1px solid #333; 
-            color: white; border-radius: 4px; box-sizing: border-box; font-family: monospace;
+        .slide-thumb { 
+            width: 70px; background: #000; background-size: cover; background-position: center; 
+            display: flex; align-items: center; justify-content: center; color: #555; font-size: 1.5rem;
         }
-        textarea { resize: vertical; min-height: 150px; }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+        .slide-details { flex: 1; padding: 10px; display: flex; flex-direction: column; justify-content: center; }
+        .slide-type-badge { font-size: 0.65rem; font-weight: bold; text-transform: uppercase; color: var(--accent-hover); margin-bottom: 4px; }
+        .slide-summary { font-size: 0.85rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 
-        .big-btn { 
-            padding: 10px 20px; background: var(--accent); color: white; border: none; 
-            border-radius: 4px; font-weight: bold; cursor: pointer; 
+        .add-bar { padding: 20px; background: #111; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .add-btn { 
+            background: var(--panel); border: 1px solid var(--border); color: white; 
+            padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .big-btn:hover { background: #0055aa; }
-        .secondary-btn { background: #444; margin-right: 10px; }
-        .danger-btn { background: #333; color: #f44; }
+        .add-btn:hover { background: #333; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); grid-column: span 2; }
+        .btn-primary:hover { background: var(--accent-hover); }
+
+        /* EDITOR AREA */
+        .editor { flex: 1; padding: 40px; background: var(--bg); overflow-y: auto; position: relative; }
+        .editor-container { max-width: 800px; margin: 0 auto; padding-bottom: 100px; }
         
-        /* NEW DURATION BUTTONS */
-        .dur-options { display: flex; gap: 10px; margin-bottom: 10px; }
-        .dur-btn { flex: 1; background: #222; border: 1px solid #444; color: #aaa; padding: 10px; cursor: pointer; border-radius: 4px; font-size: 0.8rem; }
-        .dur-btn:hover { background: #333; color: white; }
-        .dur-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
+        .panel { background: var(--panel); border-radius: 12px; padding: 30px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .panel h3 { margin-top: 0; color: #bdc3c7; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
 
-        /* TERMINAL STYLES */
-        #terminal-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 350px;
-            background: rgba(10, 10, 10, 0.98); border-top: 2px solid var(--accent);
-            display: none; flex-direction: column; z-index: 2000;
-            font-family: 'Roboto Mono', monospace; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+        /* INPUTS */
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #bdc3c7; }
+        input[type="text"], input[type="number"], select { 
+            width: 100%; padding: 12px 15px; background: #151515; border: 1px solid #333; 
+            color: white; border-radius: 6px; font-size: 1rem; box-sizing: border-box;
         }
-        #term-output { flex: 1; padding: 20px; overflow-y: auto; color: #0f0; font-size: 0.9rem; line-height: 1.4; }
-        #term-input { 
-            background: #000; border: none; border-top: 1px solid #333; 
-            color: white; padding: 15px; font-family: inherit; width: 100%; font-size: 1rem;
-        }
-        .term-close { position: absolute; top: 10px; right: 20px; color: #666; cursor: pointer; font-size: 0.8rem; }
-        .term-close:hover { color: white; }
+        input:focus { border-color: var(--accent); outline: none; }
 
-        /* MODAL STYLES */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 1000;
-            display: none; justify-content: center; align-items: center;
+        /* TOGGLE BUTTONS */
+        .toggle-group { display: flex; gap: 5px; background: #151515; padding: 5px; border-radius: 8px; }
+        .toggle-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #7f8c8d; cursor: pointer; border-radius: 6px; font-weight: 600; transition: all 0.2s; }
+        .toggle-btn.selected { background: var(--accent); color: white; shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* GRID INPUTS */
+        .grid-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .grid-row input, .grid-row select { margin: 0; }
+        .row-label { width: 50px; color: #888; font-size: 0.8rem; font-weight: bold; }
+
+        /* QUILL OVERRIDES */
+        .ql-toolbar { background: #ddd; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+        .ql-container { background: white; color: black; font-size: 16px; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; min-height: 150px; }
+
+        /* MODALS */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); z-index: 2000; display: none; 
+            justify-content: center; align-items: center; 
         }
-        .modal {
-            background: var(--panel); width: 600px; max-width: 90%;
-            border-radius: 8px; border: 1px solid var(--border);
-            display: flex; flex-direction: column; max-height: 80vh;
+        .preview-box { 
+            width: 80vw; height: 45vw; max-height: 80vh; background: #000; 
+            border: 4px solid #333; border-radius: 12px; overflow: hidden; position: relative; 
         }
-        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 20px; overflow-y: auto; }
-        .screen-row { 
-            display: flex; justify-content: space-between; align-items: center; 
-            background: #111; padding: 10px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #333;
+        .close-preview { 
+            position: absolute; top: 20px; right: 20px; 
+            background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px 20px; 
+            border-radius: 20px; cursor: pointer; font-weight: bold; z-index: 2001; 
         }
-        .screen-info { flex: 1; }
-        .screen-actions { display: flex; gap: 5px; }
-        .sm-btn { padding: 5px 10px; font-size: 0.8rem; cursor: pointer; border: 1px solid #444; background: #222; color: #ccc; border-radius: 3px; }
-        .sm-btn:hover { background: #333; color: white; }
+
+        .top-bar-btn { 
+            padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; 
+            background: #333; color: white; transition: 0.2s; margin-left: 10px;
+        }
+        .top-bar-btn.cta { background: #27ae60; }
+        .top-bar-btn.cta:hover { background: #2ecc71; }
+        .top-bar-btn:hover { background: #444; }
+
+        /* CLI TERMINAL STYLES */
+        .terminal-window {
+            width: 800px; height: 500px; background: #0c0c0c; border: 2px solid #333;
+            border-radius: 8px; display: flex; flex-direction: column; font-family: 'Roboto Mono', monospace;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .terminal-header {
+            background: #1a1a1a; padding: 10px 15px; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 0.9rem;
+        }
+        .terminal-body {
+            flex: 1; padding: 15px; overflow-y: auto; color: #2ecc71; font-size: 0.9rem;
+            white-space: pre-wrap; line-height: 1.4;
+        }
+        .terminal-input-line {
+            display: flex; border-top: 1px solid #333; padding: 10px; background: #111;
+        }
+        .terminal-prompt { color: #2ecc71; margin-right: 10px; font-weight: bold; }
+        #cli-input {
+            flex: 1; background: transparent; border: none; color: #fff; font-family: 'Roboto Mono', monospace;
+            font-size: 1rem; outline: none;
+        }
 
     </style>
 </head>
 <body>
 
     <header>
-        <div class="brand">ESPORTS SIGNAGE STUDIO</div>
-        <div class="controls">
-            <button class="big-btn secondary-btn" style="background:#222; border:1px solid #444;" onclick="toggleTerminal()">💻 TERMINAL</button>
-            <button class="big-btn secondary-btn" onclick="openScreenManager()">📺 Manage Screens</button>
-            <select id="screenSelect" style="width: 200px; padding: 8px;" onchange="changeScreen(this.value)">
-                <option value="">Loading Screens...</option>
+        <div class="brand"><span>MJHS</span> STUDIO</div>
+        <div style="display:flex; align-items:center;">
+            <select id="screenSelect" style="width: 250px; background:#111; margin-right: 15px;" onchange="changeScreen(this.value)">
+                <option value="">-- Select a Screen to Edit --</option>
             </select>
-            <button class="big-btn" onclick="pushPlaylist()">🚀 PUSH LIVE</button>
+            <button class="top-bar-btn" onclick="openCLI()">>_ Terminal</button>
+            <button class="top-bar-btn" onclick="openScreenManager()">⚙ Screens</button>
+            <button class="top-bar-btn cta" onclick="pushPlaylist()">☁ Publish to TV</button>
         </div>
     </header>
 
-    <!-- TERMINAL OVERLAY -->
-    <div id="terminal-overlay">
-        <div class="term-close" onclick="toggleTerminal()">_ MINIMIZE TERMINAL</div>
-        <div id="term-output">
-            EsportsOS Command Line Interface v1.0<br>
-            (c) School Esports Dept. All rights reserved.<br>
-            ------------------------------------------------<br>
-            Type 'help' to see available commands.<br><br>
+    <div id="previewModal" class="modal-overlay" onclick="closePreview(event)">
+        <div class="preview-box" id="previewContainer">
+            <button class="close-preview" onclick="document.getElementById('previewModal').style.display='none'">CLOSE PREVIEW</button>
+            <iframe id="previewFrame" style="width:100%; height:100%; border:none;"></iframe>
         </div>
-        <input type="text" id="term-input" placeholder=">> Enter command..." onkeydown="handleTermInput(event)">
     </div>
 
-    <!-- SCREEN MANAGER MODAL -->
-    <div id="screenModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 style="margin:0">Screen Management</h3>
-                <button class="sm-btn" onclick="closeScreenManager()">✖</button>
+    <div id="cliModal" class="modal-overlay">
+        <div class="terminal-window">
+            <div class="terminal-header">
+                <span>ADMIN CONSOLE v1.0</span>
+                <button onclick="document.getElementById('cliModal').style.display='none'" style="background:none;border:none;color:#888;cursor:pointer;">✖</button>
             </div>
-            <div class="modal-body">
-                
-                <!-- PAIRING SECTION -->
-                <div style="background:#252525; padding:15px; border-radius:4px; margin-bottom:20px;">
-                    <h4 style="margin-top:0; color:#888;">PAIR NEW DEVICE</h4>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="pairCode" placeholder="Enter 6-digit Code" style="flex:1">
-                        <input type="text" id="pairName" placeholder="Screen Name (e.g. Lobby)" style="flex:2">
-                        <button class="big-btn" onclick="pairScreen()">PAIR</button>
-                    </div>
-                </div>
+            <div class="terminal-body" id="cli-output">
+                Welcome to MJHS Admin CLI.
+                Type 'help' for available commands.
+            </div>
+            <div class="terminal-input-line">
+                <span class="terminal-prompt">admin@mjhs:~$</span>
+                <input type="text" id="cli-input" autocomplete="off" placeholder="Enter command...">
+            </div>
+        </div>
+    </div>
 
-                <!-- LIST SECTION -->
-                <h4 style="margin-bottom:10px; color:#888;">CONNECTED SCREENS</h4>
-                <div id="screen-list-container"></div>
+    <div id="screenModal" class="modal-overlay" style="z-index: 2100;">
+        <div class="panel" style="width:600px; max-height:80vh; overflow-y:auto;">
+            <h3>Device Management</h3>
+            <div style="background:#151515; padding:15px; border-radius:8px; margin-bottom:20px; display:flex; gap:10px;">
+                <input type="text" id="pairCode" placeholder="6-Digit Pairing Code" style="flex:1">
+                <input type="text" id="pairName" placeholder="Location Name" style="flex:2">
+                <button class="top-bar-btn cta" onclick="pairScreen()">Pair</button>
             </div>
+            <div id="screen-list-container"></div>
+            <button class="top-bar-btn" style="width:100%; margin-top:20px;" onclick="document.getElementById('screenModal').style.display='none'">Close</button>
         </div>
     </div>
 
     <div class="workspace">
-        <!-- SIDEBAR -->
         <div class="sidebar">
-            <div class="sidebar-header">Playlist Timeline</div>
+            <div class="sidebar-header">Slide Playlist</div>
             <div id="slide-list"></div>
-            <div class="add-buttons">
-                <button class="add-btn" onclick="addSlide('image')">+ IMAGE</button>
-                <button class="add-btn" onclick="addSlide('url')">+ WEBSITE</button>
-                <button class="add-btn" onclick="addSlide('html')">+ CODE</button>
+            <div class="add-bar">
+                <button class="add-btn btn-primary" onclick="addSlide('photo-text')">📢 Announcement</button>
+                <button class="add-btn" onclick="addSlide('image')">🖼 Photo</button>
+                <button class="add-btn" onclick="addSlide('video')">🎬 Video</button>
+                <button class="add-btn" onclick="addSlide('scores')">🏆 Scores</button>
+                <button class="add-btn" onclick="addSlide('weather')">🌤 Weather</button>
+                <button class="add-btn" onclick="addSlide('url')">🌐 Website</button>
             </div>
         </div>
 
-        <!-- EDITOR -->
         <div class="editor">
-            <div id="editor-panel" class="editor-card" style="display:none;">
-                <h2 style="margin-top:0">Edit Slide</h2>
+            <div id="editor-panel" class="editor-container" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0;">Edit Slide</h2>
+                    <div>
+                        <button class="top-bar-btn" onclick="showPreview()">👁 Play Preview</button>
+                        <button class="top-bar-btn" style="background:#c0392b;" onclick="deleteCurrentSlide()">🗑 Delete</button>
+                    </div>
+                </div>
                 
-                <!-- FILE UPLOAD SECTION -->
-                <div class="form-group" id="upload-group" style="background:#151515; padding:10px; border:1px dashed #444; margin-bottom:20px; display:none;">
-                    <label style="color:#0f0;">Upload Media from PC</label>
-                    <input type="file" id="media-upload" accept="image/*,video/*">
-                    <button class="sm-btn" style="margin-top:5px;" onclick="uploadFile()">⬆ Upload Selected File</button>
+                <div class="panel">
+                    <h3>Timing Settings</h3>
+                    <div class="input-group">
+                        <label>How long should this slide stay on screen?</label>
+                        <div class="toggle-group">
+                            <button id="btn-auto" class="toggle-btn" onclick="setDurationMode('auto')">Auto / End of Video</button>
+                            <button id="btn-custom" class="toggle-btn" onclick="setDurationMode('custom')">Fixed Time</button>
+                            <button id="btn-forever" class="toggle-btn" onclick="setDurationMode('forever')">Permanent Loop</button>
+                        </div>
+                    </div>
+                    <div id="custom-time-wrapper" class="input-group" style="display:none;">
+                        <label>Seconds:</label>
+                        <input type="number" id="edit-seconds" oninput="updateTimeFromSeconds()" placeholder="10">
+                    </div>
                 </div>
 
-                <!-- DURATION CONTROL -->
-                <div class="form-group">
-                    <label>Duration Mode</label>
-                    <div class="dur-options">
-                        <button id="btn-auto" class="dur-btn" onclick="setDurationMode('auto')">Loop At End</button>
-                        <button id="btn-forever" class="dur-btn" onclick="setDurationMode('forever')">Forever</button>
-                        <button id="btn-custom" class="dur-btn" onclick="setDurationMode('custom')">Custom Time</button>
-                    </div>
+                <div class="panel">
+                    <h3>Content Editor</h3>
                     
-                    <div id="custom-time-wrapper" style="display:none;">
-                        <label>Seconds</label>
-                        <input type="number" id="edit-seconds" oninput="updateTimeFromSeconds()" placeholder="e.g. 10">
+                    <div id="generic-editor-group">
+                        <div class="input-group">
+                            <label id="content-label">Content</label>
+                            <input type="text" id="edit-content" oninput="updateCurrentSlideGeneric()">
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label id="content-label">Content URL</label>
-                    <textarea id="edit-content" oninput="updateCurrentSlide()"></textarea>
-                </div>
-                <div style="text-align: right; margin-top: 20px;">
-                    <button class="big-btn danger-btn" onclick="deleteCurrentSlide()">Delete Slide</button>
+                    <div id="image-editor-group" style="display:none;">
+                        <div class="input-group">
+                            <label>Image Source</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="img-url-input" oninput="updateImageSlide()" placeholder="http://..." style="flex:1">
+                                <input type="file" id="img-upload" accept="image/*,video/*" style="display:none;" onchange="handleUpload(this, 'img-url-input', updateImageSlide)">
+                                <button class="top-bar-btn" onclick="document.getElementById('img-upload').click()">⬆ Upload</button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Caption Overlay (Optional)</label>
+                            <div id="caption-editor-container"></div>
+                        </div>
+                    </div>
+
+                    <div id="announcement-editor-group" style="display:none;">
+                        <div class="input-group">
+                            <label>Layout Style</label>
+                            <div class="toggle-group">
+                                <button id="layout-left" class="toggle-btn" onclick="setAnnouncementLayout('left')">Photo Left</button>
+                                <button id="layout-right" class="toggle-btn" onclick="setAnnouncementLayout('right')">Photo Right</button>
+                                <button id="layout-full" class="toggle-btn" onclick="setAnnouncementLayout('full')">Text Only</button>
+                            </div>
+                        </div>
+                        <div class="input-group" id="ann-photo-group">
+                            <label>Photo</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="ann-image-url" oninput="updateAnnouncementData()" placeholder="http://..." style="flex:1">
+                                <input type="file" id="ann-upload" accept="image/*" style="display:none;" onchange="handleUpload(this, 'ann-image-url', updateAnnouncementData)">
+                                <button class="top-bar-btn" onclick="document.getElementById('ann-upload').click()">⬆ Upload</button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Announcement Text</label>
+                            <div id="ann-editor-container"></div>
+                        </div>
+                    </div>
+
+                    <div id="video-editor-group" style="display:none;">
+                         <div class="input-group">
+                            <label>Video File</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="vid-url-input" oninput="updateVideoData()" placeholder="http://..." style="flex:1">
+                                <input type="file" id="vid-upload" accept="video/*" style="display:none;" onchange="handleUpload(this, 'vid-url-input', updateVideoData)">
+                                <button class="top-bar-btn" onclick="document.getElementById('vid-upload').click()">⬆ Upload Video</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="weather-editor-group" style="display:none;">
+                        <p style="color:#888; font-size:0.9rem;">Enter the forecast for up to 5 days.</p>
+                        <div id="weather-rows-container"></div>
+                    </div>
+
+                    <div id="scores-editor-group" style="display:none;">
+                        <div class="input-group">
+                            <label>Event Title</label>
+                            <input type="text" id="score-title" placeholder="e.g. Boys Varsity Basketball" oninput="updateScoreData()">
+                        </div>
+                        <div class="input-group">
+                            <label>Date / Subtitle</label>
+                            <input type="text" id="score-date" placeholder="e.g. Feb 7 vs Madison" oninput="updateScoreData()">
+                        </div>
+                        <label>Team Scores</label>
+                        <div id="score-rows-container"></div>
+                    </div>
+
                 </div>
             </div>
             
-            <div id="empty-state" style="color: #444; text-align: center; margin-top: 100px;">
-                <h1>No Screen Selected</h1>
-                <p>Please select a screen from the dropdown above to edit its content.</p>
+            <div id="empty-state" style="text-align: center; margin-top: 100px; color: #555;">
+                <div style="font-size: 4rem; margin-bottom: 20px;">👈</div>
+                <h2>Start by selecting a screen</h2>
+                <p>Choose a screen from the top dropdown or "Screens" menu.</p>
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 
     <script>
         const socket = io();
@@ -226,343 +323,311 @@
         let selectedIndex = -1;
         let allScreens = [];
         let currentScreenId = null;
-        let screenDrafts = {}; // Stores local changes for each screen { socketId: [slides] }
+        let screenDrafts = {}; 
 
-        // --- SCREEN SELECTION & DRAFTS ---
-        function changeScreen(newId) {
-            // 1. Save current playlist to draft (if we were editing someone)
-            if (currentScreenId) {
-                screenDrafts[currentScreenId] = JSON.parse(JSON.stringify(playlist));
-            }
-
-            // 2. Switch ID
-            currentScreenId = newId;
-
-            if (!newId) {
-                playlist = [];
-                renderList();
-                showEmptyState("No Screen Selected");
-                return;
-            }
-
-            // 3. Load New Playlist (Draft -> Server -> Default)
-            if (screenDrafts[newId]) {
-                // Load from local draft
-                playlist = JSON.parse(JSON.stringify(screenDrafts[newId]));
-            } else {
-                // Load from Server Data
-                const screen = allScreens.find(s => s.socketId === newId);
-                if (screen && screen.lastContent) {
-                    // Adapt Data
-                    if (screen.lastContent.type === 'playlist') {
-                        playlist = JSON.parse(JSON.stringify(screen.lastContent.payload));
-                    } else if (screen.lastContent.type === 'slideshow') {
-                        playlist = screen.lastContent.payload.map(url => ({ type: 'image', content: url, duration: 5000 }));
-                    } else {
-                        playlist = [{ type: screen.lastContent.type, content: screen.lastContent.payload, duration: 9999999 }];
-                    }
-                } else {
-                    // Default New Playlist
-                    playlist = [{ type: 'image', content: 'https://via.placeholder.com/1920x1080', duration: 10000 }];
-                }
-            }
-
-            // 4. Reset Editor UI
-            selectedIndex = -1;
-            renderList();
-            showEmptyState("Select a slide to edit");
+        // --- CLI LOGIC ---
+        function openCLI() { 
+            document.getElementById('cliModal').style.display = 'flex'; 
+            document.getElementById('cli-input').focus();
         }
 
-        function showEmptyState(msg) {
-            document.getElementById('editor-panel').style.display = 'none';
-            document.getElementById('empty-state').style.display = 'block';
-            document.getElementById('empty-state').querySelector('h1').innerText = msg;
-        }
-
-        // --- DURATION LOGIC ---
-        function setDurationMode(mode) {
-            const slide = playlist[selectedIndex];
-            
-            if (mode === 'auto') {
-                slide.duration = -1;
-            } else if (mode === 'forever') {
-                slide.duration = 9999999;
-            } else if (mode === 'custom') {
-                slide.duration = 10000; // Default to 10s if switching
-            }
-            
-            updateDurationUI(slide.duration);
-            renderList();
-        }
-
-        function updateTimeFromSeconds() {
-            const secs = parseFloat(document.getElementById('edit-seconds').value);
-            if (!isNaN(secs)) {
-                playlist[selectedIndex].duration = secs * 1000;
-                renderList();
-            }
-        }
-
-        function updateDurationUI(dur) {
-            // Reset Buttons
-            ['btn-auto', 'btn-forever', 'btn-custom'].forEach(id => {
-                document.getElementById(id).classList.remove('selected');
-            });
-            document.getElementById('custom-time-wrapper').style.display = 'none';
-
-            if (dur === -1) {
-                document.getElementById('btn-auto').classList.add('selected');
-            } else if (dur >= 9999990) {
-                document.getElementById('btn-forever').classList.add('selected');
-            } else {
-                document.getElementById('btn-custom').classList.add('selected');
-                document.getElementById('custom-time-wrapper').style.display = 'block';
-                document.getElementById('edit-seconds').value = dur / 1000;
-            }
-        }
-
-        // --- TERMINAL LOGIC ---
-        function toggleTerminal() {
-            const el = document.getElementById('terminal-overlay');
-            el.style.display = el.style.display === 'flex' ? 'none' : 'flex';
-            if(el.style.display === 'flex') document.getElementById('term-input').focus();
-        }
-
-        function handleTermInput(e) {
+        document.getElementById('cli-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const cmd = e.target.value;
-                if(cmd.trim()) {
-                    logToTerm(`>> ${cmd}`);
+                if(cmd.trim() !== '') {
+                    logToCli(`admin@mjhs:~$ ${cmd}`);
                     socket.emit('cli_command', cmd);
+                    e.target.value = '';
                 }
-                e.target.value = '';
             }
-        }
+        });
 
-        function logToTerm(msg) {
-            const out = document.getElementById('term-output');
-            out.innerHTML += `${msg.replace(/\n/g, '<br>')}<br>`;
+        socket.on('cli_response', (data) => {
+            logToCli(data);
+        });
+
+        function logToCli(msg) {
+            const out = document.getElementById('cli-output');
+            out.innerText += `\n${msg}`;
             out.scrollTop = out.scrollHeight;
         }
 
-        socket.on('cli_response', (msg) => logToTerm(msg));
-        socket.on('admin_log', (msg) => logToTerm(`[LOG] ${msg}`));
+        // --- EDITOR LOGIC (Preserved from Previous) ---
+        const quillConfig = { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'color': [] }, { 'background': [] }], [{ 'align': [] }], [{ 'header': [1, 2, false] }], ['clean']] } };
+        const annQuill = new Quill('#ann-editor-container', quillConfig);
+        const capQuill = new Quill('#caption-editor-container', { ...quillConfig, placeholder: 'Write a caption...' });
+        annQuill.on('text-change', () => selectedIndex !== -1 && updateAnnouncementData());
+        capQuill.on('text-change', () => selectedIndex !== -1 && updateImageSlide());
 
-        // --- SCREEN MANAGEMENT ---
-        function openScreenManager() {
-            document.getElementById('screenModal').style.display = 'flex';
-            renderScreenManagerList();
+        async function handleUpload(input, targetId, callback) {
+            if(!input.files.length) return;
+            const btn = input.nextElementSibling;
+            btn.innerText = "⏳";
+            const formData = new FormData();
+            formData.append('media', input.files[0]);
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                document.getElementById(targetId).value = data.url;
+                if(callback) callback();
+            } catch (e) { alert("Upload Failed"); }
+            btn.innerText = "⬆ Upload";
         }
 
-        function closeScreenManager() {
-            document.getElementById('screenModal').style.display = 'none';
+        function changeScreen(newId) {
+            if (currentScreenId) screenDrafts[currentScreenId] = JSON.parse(JSON.stringify(playlist));
+            currentScreenId = newId;
+            if (!newId) { playlist = []; renderList(); showEmptyState(); return; }
+            if (screenDrafts[newId]) playlist = JSON.parse(JSON.stringify(screenDrafts[newId]));
+            else {
+                const s = allScreens.find(x => x.socketId === newId);
+                playlist = (s && s.lastContent && s.lastContent.type === 'playlist') ? JSON.parse(JSON.stringify(s.lastContent.payload)) : [];
+            }
+            if(playlist.length === 0) addSlide('photo-text');
+            else selectSlide(0);
         }
 
-        function renderScreenManagerList() {
-            const container = document.getElementById('screen-list-container');
-            container.innerHTML = '';
-
-            allScreens.forEach(s => {
-                const row = document.createElement('div');
-                row.className = 'screen-row';
-                const statusColor = s.isPaired ? '#0f0' : '#888';
-                const statusText = s.isPaired ? 'Online' : 'Pending Pair';
-
-                row.innerHTML = `
-                    <div class="screen-info">
-                        <strong style="color:white; font-size:1.1rem;">${s.name}</strong>
-                        <div style="font-size:0.8rem; color:#888;">
-                            Code: ${s.pairingCode} | ID: ${s.socketId.substr(0,5)}... 
-                            <span style="color:${statusColor}">● ${statusText}</span>
-                        </div>
-                    </div>
-                    <div class="screen-actions">
-                        <button class="sm-btn" onclick="renameScreen('${s.socketId}')">Rename</button>
-                        <button class="sm-btn" style="color:#f66; border-color:#522;" onclick="deleteScreen('${s.socketId}')">Delete</button>
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-
-            if(allScreens.length === 0) container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">No devices connected.</div>';
+        function showEmptyState() {
+            document.getElementById('editor-panel').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'block';
+            document.getElementById('slide-list').innerHTML = '';
         }
 
-        function pairScreen() {
-            const code = document.getElementById('pairCode').value;
-            const name = document.getElementById('pairName').value;
-            socket.emit('admin_pair', { code, name });
-            document.getElementById('pairCode').value = '';
-            document.getElementById('pairName').value = '';
-        }
-
-        function renameScreen(id) {
-            const newName = prompt("Enter new name for this screen:");
-            if(newName) socket.emit('admin_rename_screen', { socketId: id, newName });
-        }
-
-        function deleteScreen(id) {
-            if(confirm("Are you sure you want to delete/unpair this screen?")) socket.emit('admin_delete_screen', id);
-        }
-
-        // --- PLAYLIST LOGIC ---
         function renderList() {
             const list = document.getElementById('slide-list');
             list.innerHTML = '';
             playlist.forEach((slide, index) => {
                 const el = document.createElement('div');
-                el.className = `slide-item ${index === selectedIndex ? 'active' : ''}`;
-                el.draggable = true;
+                el.className = `slide-card ${index === selectedIndex ? 'active' : ''}`;
+                let thumbIcon = "📄"; let bgStyle = ""; let typeLabel = slide.type.toUpperCase();
                 
-                // Format Duration Text for List
-                let durText = '';
-                if(slide.duration === -1) durText = '↺ AUTO';
-                else if(slide.duration >= 9999990) durText = '∞ FOREVER';
-                else durText = `⏱ ${(slide.duration/1000)}s`;
+                if (slide.type === 'photo-text') {
+                    thumbIcon = "📢"; if(slide.content.image) { bgStyle = `background-image: url('${slide.content.image}');`; thumbIcon = ""; }
+                } else if (slide.type === 'image') {
+                    thumbIcon = "🖼"; let url = typeof slide.content === 'string' ? slide.content : slide.content.url;
+                    if(url) { bgStyle = `background-image: url('${url}');`; thumbIcon = ""; }
+                } else if (slide.type === 'video') thumbIcon = "🎬";
+                else if (slide.type === 'scores') thumbIcon = "🏆";
+                else if (slide.type === 'weather') thumbIcon = "🌤";
 
-                let preview = slide.content.length > 30 ? slide.content.substring(0, 30) + '...' : slide.content;
-                el.innerHTML = `<div class="handle">⋮⋮</div><div class="slide-info"><div class="slide-type">${slide.type}</div><div class="slide-title">${preview}</div><div class="slide-dur">${durText}</div></div>`;
+                el.innerHTML = `<div class="slide-thumb" style="${bgStyle}">${thumbIcon}</div><div class="slide-details"><div class="slide-type-badge">${typeLabel}</div><div class="slide-summary">Slide ${index + 1}</div></div>`;
                 el.onclick = () => selectSlide(index);
-                el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); el.classList.add('dragging'); };
-                el.ondragend = () => el.classList.remove('dragging');
-                el.ondragover = (e) => e.preventDefault();
-                el.ondrop = (e) => handleDrop(e, index);
                 list.appendChild(el);
             });
         }
 
         function selectSlide(index) {
             selectedIndex = index;
-            renderList();
             const slide = playlist[index];
             document.getElementById('empty-state').style.display = 'none';
             document.getElementById('editor-panel').style.display = 'block';
+            renderList();
             
-            // Populate Fields
-            document.getElementById('edit-content').value = slide.content;
-            updateDurationUI(slide.duration); // Set button states
+            ['generic', 'image', 'announcement', 'video', 'weather', 'scores'].forEach(g => document.getElementById(g+'-editor-group').style.display = 'none');
 
-            const lbl = document.getElementById('content-label');
-            const uploadGroup = document.getElementById('upload-group');
-            
-            if(slide.type === 'image') {
-                lbl.innerText = "Image/Video URL or Upload Above";
-                uploadGroup.style.display = 'block';
+            if(slide.type === 'photo-text') {
+                document.getElementById('announcement-editor-group').style.display = 'block';
+                annQuill.root.innerHTML = slide.content.text || '';
+                document.getElementById('ann-image-url').value = slide.content.image || '';
+                setAnnouncementLayout(slide.content.layout || 'left', false);
+            } else if (slide.type === 'image') {
+                document.getElementById('image-editor-group').style.display = 'block';
+                const url = typeof slide.content === 'string' ? slide.content : slide.content.url;
+                const caption = (typeof slide.content === 'object') ? slide.content.caption : '';
+                document.getElementById('img-url-input').value = url;
+                capQuill.root.innerHTML = caption;
+            } else if (slide.type === 'video') {
+                document.getElementById('video-editor-group').style.display = 'block';
+                document.getElementById('vid-url-input').value = slide.content.url || '';
+            } else if (slide.type === 'weather') {
+                document.getElementById('weather-editor-group').style.display = 'block';
+                renderWeatherInputs(slide.content.days);
+            } else if (slide.type === 'scores') {
+                document.getElementById('scores-editor-group').style.display = 'block';
+                document.getElementById('score-title').value = slide.content.title || '';
+                document.getElementById('score-date').value = slide.content.date || '';
+                renderScoreInputs(slide.content.teams);
             } else {
-                uploadGroup.style.display = 'none';
-                if(slide.type === 'url') lbl.innerText = "Website Address";
-                if(slide.type === 'html') lbl.innerText = "HTML / Embed Code";
+                document.getElementById('generic-editor-group').style.display = 'block';
+                document.getElementById('edit-content').value = slide.content;
+                document.getElementById('content-label').innerText = slide.type === 'url' ? 'Website Address' : 'HTML Code';
+            }
+
+            // Duration UI
+            ['btn-auto', 'btn-forever', 'btn-custom'].forEach(id => document.getElementById(id).classList.remove('selected'));
+            document.getElementById('custom-time-wrapper').style.display = 'none';
+            if(slide.duration === -1) document.getElementById('btn-auto').classList.add('selected');
+            else if(slide.duration >= 9999990) document.getElementById('btn-forever').classList.add('selected');
+            else {
+                document.getElementById('btn-custom').classList.add('selected');
+                document.getElementById('custom-time-wrapper').style.display = 'block';
+                document.getElementById('edit-seconds').value = slide.duration / 1000;
+            }
+        }
+
+        const WEATHER_ICONS = ["☀️", "⛅", "☁️", "🌧️", "⛈️", "❄️"];
+        function renderWeatherInputs(days) {
+            const container = document.getElementById('weather-rows-container');
+            container.innerHTML = '';
+            for(let i=0; i<5; i++) {
+                const day = days[i] || { name: '', icon: '☀️', high: '', low: '' };
+                const div = document.createElement('div');
+                div.className = 'grid-row';
+                let iconOpts = WEATHER_ICONS.map(ic => `<option value="${ic}" ${day.icon === ic ? 'selected' : ''}>${ic}</option>`).join('');
+                div.innerHTML = `<input type="text" placeholder="Day (e.g. Mon)" value="${day.name}" style="flex:1" oninput="updateWeatherData()"><select style="width:80px;" onchange="updateWeatherData()">${iconOpts}</select><input type="text" placeholder="High" value="${day.high}" style="width:60px" oninput="updateWeatherData()"><input type="text" placeholder="Low" value="${day.low}" style="width:60px" oninput="updateWeatherData()">`;
+                container.appendChild(div);
+            }
+        }
+        function renderScoreInputs(teams) {
+            const container = document.getElementById('score-rows-container');
+            container.innerHTML = '';
+            for(let i=0; i<4; i++) {
+                const team = teams[i] || { name: '', score: '' };
+                const div = document.createElement('div');
+                div.className = 'grid-row';
+                div.innerHTML = `<div class="row-label">#${i+1}</div><input type="text" placeholder="Team Name" value="${team.name}" style="flex:2" oninput="updateScoreData()"><input type="text" placeholder="Score" value="${team.score}" style="flex:1" oninput="updateScoreData()">`;
+                container.appendChild(div);
             }
         }
 
         function addSlide(type) {
-            if(!currentScreenId) return alert("Please select a screen first!");
-            
-            const newSlide = { type: type, content: '', duration: 10000 };
-            if(type === 'image') newSlide.content = 'https://via.placeholder.com/1920x1080';
-            if(type === 'html') newSlide.content = '<h1>New Slide</h1>';
-            playlist.push(newSlide);
+            if(!currentScreenId) return alert("Select a screen first!");
+            let content = '';
+            if(type === 'photo-text') content = { text: '', image: '', layout: 'left' };
+            else if(type === 'image') content = { url: '', caption: '' };
+            else if(type === 'video') content = { url: '' };
+            else if(type === 'weather') content = { days: Array(5).fill({ name: '', icon: '☀️', high: '', low: '' }) };
+            else if(type === 'scores') content = { title: '', date: '', teams: Array(4).fill({ name: '', score: '' }) };
+            else if(type === 'url') content = 'https://google.com';
+            playlist.push({ type, content, duration: 10000 });
             selectSlide(playlist.length - 1);
         }
 
-        function updateCurrentSlide() {
+        function updateWeatherData() {
             if(selectedIndex === -1) return;
-            // Duration is handled by setDurationMode/updateTimeFromSeconds
-            playlist[selectedIndex].content = document.getElementById('edit-content').value;
-            renderList();
+            const rows = document.getElementById('weather-rows-container').children;
+            const days = [];
+            for(let row of rows) days.push({ name: row.children[0].value, icon: row.children[1].value, high: row.children[2].value, low: row.children[3].value });
+            playlist[selectedIndex].content.days = days;
         }
-
-        function deleteCurrentSlide() {
+        function updateScoreData() {
             if(selectedIndex === -1) return;
-            playlist.splice(selectedIndex, 1);
-            selectedIndex = -1;
-            document.getElementById('editor-panel').style.display = 'none';
-            document.getElementById('empty-state').style.display = 'block';
-            renderList();
+            const rows = document.getElementById('score-rows-container').children;
+            const teams = [];
+            for(let row of rows) teams.push({ name: row.children[1].value, score: row.children[2].value });
+            playlist[selectedIndex].content.title = document.getElementById('score-title').value;
+            playlist[selectedIndex].content.date = document.getElementById('score-date').value;
+            playlist[selectedIndex].content.teams = teams;
         }
+        function updateVideoData() { if(selectedIndex !== -1) playlist[selectedIndex].content.url = document.getElementById('vid-url-input').value; }
+        function updateAnnouncementData() { if(selectedIndex !== -1) { playlist[selectedIndex].content.text = annQuill.root.innerHTML; playlist[selectedIndex].content.image = document.getElementById('ann-image-url').value; renderList(); } }
+        function updateImageSlide() { if(selectedIndex !== -1) { playlist[selectedIndex].content = { url: document.getElementById('img-url-input').value, caption: capQuill.root.innerHTML }; renderList(); } }
+        function updateCurrentSlideGeneric() { if(selectedIndex !== -1) playlist[selectedIndex].content = document.getElementById('edit-content').value; }
+        function setDurationMode(mode) { if(selectedIndex !== -1) { const s = playlist[selectedIndex]; if(mode === 'auto') s.duration = -1; else if(mode === 'forever') s.duration = 9999999; else s.duration = 10000; selectSlide(selectedIndex); } }
+        function updateTimeFromSeconds() { const v = document.getElementById('edit-seconds').value; if(selectedIndex !== -1 && v) playlist[selectedIndex].duration = v * 1000; }
+        function setAnnouncementLayout(layout, save=true) { 
+            ['left', 'right', 'full'].forEach(k => document.getElementById('layout-'+k).classList.remove('selected'));
+            document.getElementById('layout-'+layout).classList.add('selected');
+            document.getElementById('ann-photo-group').style.display = layout === 'full' ? 'none' : 'block';
+            if(save && selectedIndex !== -1) playlist[selectedIndex].content.layout = layout;
+        }
+        function deleteCurrentSlide() { if(selectedIndex === -1 || !confirm("Delete this slide?")) return; playlist.splice(selectedIndex, 1); selectedIndex = -1; if(playlist.length > 0) selectSlide(0); else showEmptyState(); }
 
-        // --- UPLOAD LOGIC ---
-        async function uploadFile() {
-            const fileInput = document.getElementById('media-upload');
-            if (fileInput.files.length === 0) return alert("Please select a file first.");
-
-            const formData = new FormData();
-            formData.append('media', fileInput.files[0]);
-
-            const btn = fileInput.nextElementSibling;
-            btn.innerText = "Uploading...";
-            btn.disabled = true;
-
-            try {
-                const response = await fetch('/api/upload', { method: 'POST', body: formData });
-                const result = await response.json();
-                
-                if (result.url) {
-                    document.getElementById('edit-content').value = result.url;
-                    updateCurrentSlide();
-                    alert("Upload Complete!");
+        // --- PREVIEW ---
+        function showPreview() {
+            if(!currentScreenId || selectedIndex === -1) return;
+            const modal = document.getElementById('previewModal');
+            const frame = document.getElementById('previewFrame');
+            modal.style.display = 'flex';
+            const slide = playlist[selectedIndex];
+            
+            let style = `
+                <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+                <style>
+                    body { margin:0; background:#000; color:white; font-family:'Roboto',sans-serif; overflow:hidden; }
+                    img { width:100%; height:100%; object-fit:contain; }
+                    .split-layout { display:flex; width:100%; height:100vh; }
+                    .split-photo { flex:1; background-size:cover; background-position:center; }
+                    .split-text { flex:1; display:flex; align-items:center; justify-content:center; padding:40px; background:#1a1a1a; color:#ddd; font-size:1.5vw; }
+                    .full-text { width:100%; height:100vh; padding:60px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; flex-direction:column; font-size:2vw; text-align:center; }
+                    .caption-overlay { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); padding:10px 30px; border-radius:10px; border-left:4px solid #f1c40f; text-align:center; font-size: 1.5rem; }
+                    .weather-grid { display:flex; height:100vh; width:100%; }
+                    .weather-day { flex:1; border-right:1px solid #333; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#111; padding:20px; text-align:center; }
+                    .day-name { font-size:2rem; font-weight:bold; color:#888; text-transform:uppercase; margin-bottom:20px; }
+                    .day-icon { font-size:6rem; margin-bottom:20px; }
+                    .day-temps { font-size:2.5rem; font-weight:bold; }
+                    .high { color: #e67e22; } .low { color: #3498db; }
+                    .score-container { padding: 40px; height: 100vh; background: #000; display: flex; flex-direction: column; justify-content: center; }
+                    .score-header { text-align: center; margin-bottom: 40px; }
+                    .score-title { font-size: 3rem; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 2px; }
+                    .score-date { font-size: 1.8rem; color: #888; margin-top: 10px; }
+                    .score-table { width: 100%; max-width: 1000px; margin: 0 auto; background: #151515; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
+                    .score-row { display: flex; justify-content: space-between; padding: 25px 40px; border-bottom: 1px solid #222; font-size: 2.5rem; color: #ccc; }
+                    .score-row:last-child { border-bottom: none; }
+                    .score-val { font-weight: 700; color: white; font-family: monospace; }
+                    .winner { background: #1a2600; color: #f1c40f; border-left: 8px solid #f1c40f; }
+                </style>`;
+            
+            let html = style;
+            if (slide.type === 'photo-text') {
+                const d = slide.content;
+                if(d.layout === 'full') html += `<div class="full-text">${d.text}</div>`;
+                else {
+                    const dir = d.layout === 'right' ? 'row-reverse' : 'row';
+                    html += `<div class="split-layout" style="flex-direction:${dir}"><div class="split-photo" style="background-image:url('${d.image}')"></div><div class="split-text"><div>${d.text}</div></div></div>`;
                 }
-            } catch (err) {
-                alert("Upload failed: " + err.message);
+            } else if (slide.type === 'image') {
+                const url = typeof slide.content === 'string' ? slide.content : slide.content.url;
+                const cap = typeof slide.content === 'object' ? slide.content.caption : '';
+                html += `<img src="${url}">`;
+                if(cap) html += `<div class="caption-overlay">${cap}</div>`;
+            } else if (slide.type === 'video') {
+                html += `<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;"><h1>Video Playback</h1></div>`;
+            } else if (slide.type === 'weather') {
+                html += '<div class="weather-grid">';
+                slide.content.days.forEach(d => { html += `<div class="weather-day"><div class="day-name">${d.name}</div><div class="day-icon">${d.icon}</div><div class="day-temps"><span class="high">${d.high}°</span> / <span class="low">${d.low}°</span></div></div>`; });
+                html += '</div>';
+            } else if (slide.type === 'scores') {
+                html += `<div class="score-container"><div class="score-header"><div class="score-title">${slide.content.title}</div><div class="score-date">${slide.content.date}</div></div><div class="score-table">`;
+                let max = -1;
+                slide.content.teams.forEach(t => { if(parseInt(t.score)>max) max=parseInt(t.score); });
+                slide.content.teams.forEach(t => { if(t.name) { const isWin = parseInt(t.score) === max && max > 0; html += `<div class="score-row ${isWin?'winner':''}"><span>${t.name}</span><span class="score-val">${t.score}</span></div>`; } });
+                html += `</div></div>`;
             }
             
-            btn.innerText = "⬆ Upload Selected File";
-            btn.disabled = false;
+            const doc = frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
         }
+        function closePreview(e) { if(e.target.id === 'previewModal') document.getElementById('previewModal').style.display='none'; }
 
-        // --- DRAG AND DROP ---
-        function handleDrop(e, dropIndex) {
-            e.preventDefault();
-            const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
-            if(dragIndex === dropIndex) return;
-            const item = playlist.splice(dragIndex, 1)[0];
-            playlist.splice(dropIndex, 0, item);
-            selectedIndex = dropIndex;
-            renderList();
-        }
-
+        // --- SCREEN MANAGER ---
         function pushPlaylist() {
-            const targetId = document.getElementById('screenSelect').value;
-            if (!targetId) return alert("Please select a screen first!");
-            
-            // Update draft so we don't revert on reload
-            screenDrafts[targetId] = JSON.parse(JSON.stringify(playlist));
-
-            socket.emit('push_content', {
-                targetId: targetId,
-                content: { type: 'playlist', payload: playlist }
-            });
+            if(!currentScreenId) return alert("No screen selected!");
+            screenDrafts[currentScreenId] = JSON.parse(JSON.stringify(playlist));
+            socket.emit('push_content', { targetId: currentScreenId, content: { type: 'playlist', payload: playlist } });
+            alert("Sent to TV! 🚀");
         }
 
-        // --- SOCKET SETUP ---
         socket.on('update_screen_list', (screens) => {
-            allScreens = screens; // Store for manager
-            renderScreenManagerList(); // Refresh modal if open
-
+            allScreens = screens;
             const select = document.getElementById('screenSelect');
-            const currentVal = select.value;
+            const oldVal = select.value;
+            select.innerHTML = '<option value="">-- Select a Screen to Edit --</option>';
+            screens.filter(s => s.isPaired).forEach(s => { const opt = document.createElement('option'); opt.value = s.socketId; opt.text = s.name; select.appendChild(opt); });
+            if(oldVal) select.value = oldVal;
             
-            // Only rebuild options if length changed or first load (keeps selection stable)
-            // But we must rebuild to show new/online status changes
-            select.innerHTML = '<option value="">-- Select a Screen --</option>';
-            
-            screens.filter(s => s.isPaired).forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.socketId;
-                opt.text = s.name;
-                select.appendChild(opt);
-            });
-
-            if(currentVal && screens.find(s => s.socketId === currentVal)) {
-                select.value = currentVal;
-            } else if (!currentVal && screens.length > 0) {
-                 // Optional: Auto-select first screen? 
-                 // select.value = screens[0].socketId;
-                 // changeScreen(screens[0].socketId);
-            }
+            const list = document.getElementById('screen-list-container');
+            list.innerHTML = screens.map(s => `
+                <div style="background:#222; padding:10px; margin-bottom:5px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
+                    <div><strong>${s.name}</strong> <span style="color:#777; font-size:0.8rem;">(${s.isPaired?'Online':'Pending'})</span></div>
+                    <div><button onclick="deleteScreen('${s.socketId}')" style="background:#c0392b; border:none; color:white; padding:5px 10px; cursor:pointer; border-radius:4px;">Unpair</button></div>
+                </div>
+            `).join('');
         });
 
-        // Initialize empty
-        showEmptyState("No Screen Selected");
+        function openScreenManager() { document.getElementById('screenModal').style.display = 'flex'; }
+        function pairScreen() { socket.emit('admin_pair', { code: document.getElementById('pairCode').value, name: document.getElementById('pairName').value }); }
+        function deleteScreen(id) { if(confirm("Unpair this screen?")) socket.emit('admin_delete_screen', id); }
+
     </script>
 </body>
 </html>

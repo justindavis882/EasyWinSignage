@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MJHS Signage Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #121212; --card: #1e1e1e; --accent: #2980b9; --text: #ecf0f1; }
+        
+        body { 
+            background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; 
+            margin: 0; height: 100vh; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center;
+        }
+
+        .container { text-align: center; max-width: 1000px; width: 100%; padding: 20px; }
+        
+        h1 { font-size: 3rem; margin-bottom: 10px; font-weight: 800; letter-spacing: -1px; }
+        h1 span { color: #f1c40f; }
+        p { color: #7f8c8d; margin-bottom: 50px; font-size: 1.2rem; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
+
+        .card { 
+            background: var(--card); padding: 40px; border-radius: 12px; 
+            border: 1px solid #333; text-decoration: none; color: white; 
+            transition: transform 0.2s, border-color 0.2s; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .card:hover { transform: translateY(-5px); border-color: var(--accent); background: #252525; }
+
+        .icon { font-size: 4rem; margin-bottom: 20px; }
+        .title { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+        .desc { font-size: 0.9rem; color: #888; text-align: center; line-height: 1.4; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1><span>MJHS</span> SIGNAGE PORTAL</h1>
+        <p>Select a destination to begin</p>
+
+        <div class="grid">
+            <a href="admin.html" class="card">
+                <div class="icon">💻</div>
+                <div class="title">Studio Admin</div>
+                <div class="desc">Create slides, manage playlists, and control screens.</div>
+            </a>
+
+            <a href="dashboard.html" class="card">
+                <div class="icon">📊</div>
+                <div class="title">Status Dashboard</div>
+                <div class="desc">Monitor active screens and view system health.</div>
+            </a>
+
+            <a href="receiver.html" class="card">
+                <div class="icon">📺</div>
+                <div class="title">Launch Player</div>
+                <div class="desc">Turn this device into a digital signage screen.</div>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

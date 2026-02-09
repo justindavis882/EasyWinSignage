@@ -240,4 +240,6 @@ help              : Show this menu`);
 const PORT = 3000;
 server.listen(PORT, () => {
     console.log(`Server running on Port ${PORT}`);
+    console.log('DO NOT CLOSE THIS WHILE SCREENS ARE OPEN');
+    console.log('CTRL + C to close server. Type Exit to leave command prompt.');
 });

@@ -1,10 +1,56 @@
 [
   {
-    "deviceId": "tv_cdvypi2jj",
-    "socketId": "jA-5qmHLkO4Py34BAAAD",
-    "pairingCode": "117140",
+    "deviceId": "D_r7irqp",
+    "socketId": "L8FDtxMZsO_W963FAAAJ",
+    "pairingCode": "432416",
     "name": "Desktop",
     "isPaired": true,
-    "lastContent": null
+    "lastContent": {
+      "type": "playlist",
+      "payload": [
+        {
+          "type": "photo-text",
+          "content": {
+            "text": "",
+            "image": "",
+            "layout": "left"
+          },
+          "duration": 10000
+        },
+        {
+          "type": "video",
+          "content": {
+            "url": ""
+          },
+          "duration": 10000
+        },
+        {
+          "type": "scores",
+          "content": {
+            "title": "MJHS Rocket League Match 3",
+            "date": "02/06/2026",
+            "teams": [
+              {
+                "name": "MJHS",
+                "score": "18"
+              },
+              {
+                "name": "GCCMS",
+                "score": "12"
+              },
+              {
+                "name": "",
+                "score": ""
+              },
+              {
+                "name": "",
+                "score": ""
+              }
+            ]
+          },
+          "duration": 10000
+        }
+      ]
+    }
   }
 ]

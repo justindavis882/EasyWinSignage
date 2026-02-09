@@ -1,109 +1,159 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Signage Player</title>
+    <title>MJHS Signage Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        #app { width: 100vw; height: 100vh; position: relative; }
+        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Roboto', sans-serif; }
         
-        /* Pairing & System UI */
-        .system-msg { 
-            position: absolute; top:0; left:0; width:100%; height:100%; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            background: #000; z-index: 999;
+        #app { width: 100vw; height: calc(100vh - 60px); position: relative; }
+
+        /* FOOTER */
+        #footer {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 60px;
+            background: linear-gradient(90deg, #003366 0%, #001a33 100%);
+            border-top: 4px solid #f1c40f;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 40px; box-sizing: border-box; z-index: 2000;
         }
-        .code-box { text-align: center; animation: pulse 3s infinite; }
-        .code { font-size: 8rem; font-weight: 900; letter-spacing: 15px; color: #00ffcc; text-shadow: 0 0 30px rgba(0,255,204,0.5); }
-        h2 { text-transform: uppercase; letter-spacing: 5px; color: #888; margin-bottom: 20px; }
-        .error-box { border: 2px solid red; padding: 20px; background: #200; text-align: center; }
+        .footer-brand { font-size: 1.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+        .footer-clock { font-size: 1.8rem; font-weight: 300; font-family: monospace; color: #f1c40f; }
 
-        /* Content Styles */
-        .slide-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        /* SLIDE CONTAINER */
+        .slide-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: #000; }
         iframe { width: 100%; height: 100%; border: none; }
-        img { width: 100%; height: 100%; object-fit: contain; background: black; }
+        img { width: 100%; height: 100%; object-fit: contain; }
 
+        /* RICH TEXT STYLING */
+        .rich-text-content h1 { margin-top: 0; color: #f1c40f; font-size: 3rem; text-transform: uppercase; }
+        .rich-text-content h2 { color: #5bc0de; font-size: 2.5rem; margin-bottom: 0.5em; }
+        .rich-text-content p { font-size: 1.8rem; line-height: 1.5; margin-bottom: 1rem; }
+        .rich-text-content ul { font-size: 1.8rem; line-height: 1.5; padding-left: 1.5em; }
+        .rich-text-content strong { color: #fff; font-weight: 700; }
+        .ql-align-center { text-align: center; }
+        .ql-align-right { text-align: right; }
+
+        /* LAYOUTS */
+        .split-layout { display: flex; width: 100%; height: 100%; }
+        .split-photo { flex: 1; background-size: cover; background-position: center; }
+        .split-text { flex: 1; display: flex; align-items: center; justify-content: center; padding: 80px; box-sizing: border-box; background: #1a1a1a; color: #ddd; }
+        .full-text { width: 100%; height: 100%; padding: 100px; background: #1a1a1a; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .caption-overlay { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 20px 40px; border-radius: 10px; max-width: 80%; text-align: center; border-left: 5px solid #f1c40f; }
+
+        /* WEATHER */
+        .weather-grid { display: flex; height: 100%; width: 100%; }
+        .weather-day { flex: 1; border-right: 1px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #111; padding: 20px; }
+        .day-name { font-size: 2.5rem; font-weight: 900; color: #888; text-transform: uppercase; margin-bottom: 30px; }
+        .day-icon { font-size: 8rem; margin-bottom: 30px; }
+        .day-temps { font-size: 3rem; font-weight: bold; }
+        .high { color: #e67e22; } .low { color: #3498db; }
+
+        /* SCORES */
+        .score-container { padding: 50px; height: 100%; background: #080808; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
+        .score-header { text-align: center; margin-bottom: 50px; }
+        .score-title { font-size: 4rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 3px; }
+        .score-date { font-size: 2rem; color: #888; margin-top: 10px; font-weight: 300; }
+        .score-table { width: 100%; max-width: 1200px; margin: 0 auto; background: #151515; border-radius: 16px; overflow: hidden; border: 1px solid #333; }
+        .score-row { display: flex; justify-content: space-between; padding: 35px 50px; border-bottom: 1px solid #222; font-size: 3rem; color: #ccc; align-items: center; }
+        .score-val { font-weight: 900; color: white; font-family: monospace; }
+        .winner { background: linear-gradient(90deg, #1a2600 0%, #151515 100%); color: #f1c40f; border-left: 10px solid #f1c40f; }
+
+        /* ALERT OVERLAY */
+        #alert-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 3000; display: none;
+            justify-content: center; align-items: center; flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+        .alert-box { border: 4px solid #c0392b; background: #000; padding: 40px; max-width: 80%; text-align: center; border-radius: 20px; }
+        .alert-title { color: #c0392b; font-size: 3rem; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; animation: blink 1s infinite; }
+        .alert-msg { color: white; font-size: 4rem; font-weight: bold; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* IDENTIFY FLASH */
+        @keyframes flash { 0% { background: white; } 100% { background: black; } }
+        .identify-anim { animation: flash 0.5s 3; }
+
+        /* SYSTEM */
+        .system-msg { position: absolute; top:0; left:0; width:100%; height:100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; z-index: 999; }
+        .code { font-size: 8rem; font-weight: 900; color: #f1c40f; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
     </style>
-    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+    
     <div id="app">
-        <div class="system-msg"><h1>Booting System...</h1></div>
+        <div class="system-msg"><h1>Booting...</h1></div>
+    </div>
+    
+    <div id="alert-overlay">
+        <div class="alert-box">
+            <div class="alert-title">⚠️ Admin Message</div>
+            <div id="alert-text" class="alert-msg"></div>
+        </div>
     </div>
 
-    <script>
-        const app = document.getElementById('app');
-        
-        if (typeof io === 'undefined') {
-            app.innerHTML = `<div class="system-msg"><div class="error-box"><h1>SYSTEM ERROR</h1><p>Socket.io not found.</p><p>Use http://localhost:3000</p></div></div>`;
-            throw new Error("Socket.io missing");
-        }
+    <div id="footer">
+        <div class="footer-brand">Welcome to MJHS</div>
+        <div id="clock" class="footer-clock">--:--</div>
+    </div>
 
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        setInterval(() => {
+            const now = new Date();
+            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const date = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+            document.getElementById('clock').innerHTML = `<span style="font-size:1rem; margin-right:15px; color:#ccc;">${date}</span>${time}`;
+        }, 1000);
+
+        if (typeof io === 'undefined') throw new Error("Socket missing");
         const socket = io();
+        const app = document.getElementById('app');
         let playTimer; 
 
-        // --- HELPER: IDENTITY ---
         const getDeviceId = () => {
-            let id = localStorage.getItem('signage_deviceId');
-            if (!id) {
-                id = 'tv_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('signage_deviceId', id);
-            }
+            let id = localStorage.getItem('sid');
+            if (!id) { id = 'D_' + Math.random().toString(36).substr(2, 6); localStorage.setItem('sid', id); }
             return id;
         };
 
-        // --- SOCKET EVENTS ---
-        socket.on('connect', () => {
-            socket.emit('register_screen', getDeviceId());
-        });
-
+        socket.on('connect', () => socket.emit('register_screen', getDeviceId()));
         socket.on('show_pairing_code', (code) => {
             clearPlaylist();
-            app.innerHTML = `<div class="system-msg"><div class="code-box"><h2>Pairing Code</h2><div class="code">${code}</div></div></div>`;
+            app.innerHTML = `<div class="system-msg"><h2>PAIRING CODE</h2><div class="code">${code}</div></div>`;
         });
-
         socket.on('paired_success', (data) => {
             clearPlaylist();
-            app.innerHTML = `<div class="system-msg"><h1>Connected: ${data.name}</h1><h3>Waiting for Content...</h3></div>`;
+            app.innerHTML = `<div class="system-msg"><h1>Online: ${data.name}</h1><h3>Waiting for content...</h3></div>`;
         });
-
-        // --- CLI COMMAND HANDLERS ---
-        socket.on('identify', () => {
-            const id = getDeviceId();
-            const el = document.createElement('div');
-            el.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; border: 20px solid red; z-index:9999; display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.8); color:red; font-size:5rem; font-weight:bold;";
-            el.innerText = "ID: " + id;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 5000);
-        });
-
-        socket.on('show_alert', (msg) => {
-            const el = document.createElement('div');
-            el.style.cssText = "position:fixed; bottom:50px; left:50%; transform:translateX(-50%); background:red; color:white; padding:20px 50px; font-size:2rem; border-radius:10px; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:sans-serif; text-transform:uppercase; letter-spacing:2px;";
-            el.innerText = msg;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 10000);
-        });
-
-        socket.on('force_refresh', () => location.reload());
-
-        // --- THE PLAYLIST ENGINE ---
+        
         socket.on('update_content', (data) => {
             let playlist = [];
-            if (data.type === 'playlist') {
-                playlist = data.payload;
-            } else if (data.type === 'slideshow') {
-                playlist = data.payload.map(url => ({ type: 'image', content: url, duration: 5000 }));
-            } else {
-                playlist = [{ type: data.type, content: data.payload, duration: 999999 }];
-            }
+            if (data.type === 'playlist') playlist = data.payload;
+            else if (data.type === 'slideshow') playlist = data.payload.map(u => ({ type: 'image', content: { url: u, caption: '' }, duration: 5000 }));
+            else playlist = [{ type: data.type, content: data.payload, duration: 999999 }];
             startPlaylist(playlist);
         });
 
-        function clearPlaylist() {
-            if (playTimer) clearTimeout(playTimer);
-            app.innerHTML = '';
-        }
+        // --- NEW: ADMINISTRATIVE COMMANDS ---
+        socket.on('force_refresh', () => location.reload());
+        
+        socket.on('identify', () => {
+            document.body.classList.add('identify-anim');
+            setTimeout(() => document.body.classList.remove('identify-anim'), 1500);
+        });
+
+        socket.on('show_alert', (msg) => {
+            const el = document.getElementById('alert-overlay');
+            const txt = document.getElementById('alert-text');
+            txt.innerText = msg;
+            el.style.display = 'flex';
+            // Hide after 10 seconds
+            setTimeout(() => { el.style.display = 'none'; }, 10000);
+        });
+
+        function clearPlaylist() { if (playTimer) clearTimeout(playTimer); app.innerHTML = ''; }
 
         function startPlaylist(playlist) {
             clearPlaylist();
@@ -112,62 +162,61 @@
             const runSlide = () => {
                 const slide = playlist[index];
                 app.innerHTML = ''; 
-
                 const container = document.createElement('div');
                 container.className = 'slide-container';
 
-                // Render Content
-                let isVideo = false;
-
-                if (slide.type === 'image') {
-                    // Check if it's a video (simple check for extension)
-                    if(slide.content.match(/\.(mp4|webm)$/i)) {
-                         isVideo = true;
-                         // Don't auto-loop if we are controlling flow via 'ended' event
-                         const loopAttr = (slide.duration === -1) ? '' : 'loop';
-                         container.innerHTML = `<video src="${slide.content}" autoplay muted ${loopAttr} style="width:100%; height:100%; object-fit:cover;"></video>`;
+                if (slide.type === 'photo-text') {
+                    const d = slide.content;
+                    if (d.layout === 'full') {
+                        container.innerHTML = `<div class="full-text rich-text-content">${d.text}</div>`;
                     } else {
-                         container.innerHTML = `<img src="${slide.content}">`;
+                        const dir = d.layout === 'right' ? 'row-reverse' : 'row';
+                        container.innerHTML = `<div class="split-layout" style="flex-direction: ${dir};"><div class="split-photo" style="background-image: url('${d.image}');"></div><div class="split-text rich-text-content"><div>${d.text}</div></div></div>`;
                     }
-                } else if (slide.type === 'url') {
-                    container.innerHTML = `<iframe src="${slide.content}"></iframe>`;
-                } else if (slide.type === 'html') {
-                    container.innerHTML = slide.content;
+                } 
+                else if (slide.type === 'image') {
+                    const url = (typeof slide.content === 'string') ? slide.content : slide.content.url;
+                    const caption = (typeof slide.content === 'object' && slide.content.caption) ? slide.content.caption : '';
+                    container.innerHTML = `<img src="${url}">`;
+                    if(caption) container.innerHTML += `<div class="caption-overlay rich-text-content">${caption}</div>`;
+                } 
+                else if (slide.type === 'video') {
+                    const url = slide.content.url;
+                    const isLoop = slide.duration !== -1; 
+                    container.innerHTML = `<video src="${url}" autoplay muted ${isLoop?'loop':''} style="width:100%;height:100%;object-fit:cover;background:black;"></video>`;
+                    if(!isLoop) {
+                        const v = container.querySelector('video');
+                        v.onended = () => { index = (index + 1) % playlist.length; runSlide(); };
+                        app.appendChild(container);
+                        return; 
+                    }
                 }
+                else if (slide.type === 'weather') {
+                    let html = '<div class="weather-grid">';
+                    slide.content.days.forEach(d => { if(d.name) html += `<div class="weather-day"><div class="day-name">${d.name}</div><div class="day-icon">${d.icon}</div><div class="day-temps"><span class="high">${d.high}°</span> / <span class="low">${d.low}°</span></div></div>`; });
+                    html += '</div>';
+                    container.innerHTML = html;
+                }
+                else if (slide.type === 'scores') {
+                    let html = `<div class="score-container"><div class="score-header"><div class="score-title">${slide.content.title}</div><div class="score-date">${slide.content.date}</div></div><div class="score-table">`;
+                    let max = -1;
+                    slide.content.teams.forEach(t => { if(parseInt(t.score)>max) max=parseInt(t.score); });
+                    slide.content.teams.forEach(t => { if(t.name) { const isWin = parseInt(t.score) === max && max > 0; html += `<div class="score-row ${isWin?'winner':''}"><span>${t.name}</span><span class="score-val">${t.score}</span></div>`; } });
+                    html += `</div></div>`;
+                    container.innerHTML = html;
+                }
+                else if (slide.type === 'url') container.innerHTML = `<iframe src="${slide.content}"></iframe>`;
+                else if (slide.type === 'html') container.innerHTML = slide.content;
 
                 app.appendChild(container);
 
-                // --- SCHEDULING NEXT SLIDE ---
                 if (playlist.length > 1) {
-                    const nextIndex = (index + 1) % playlist.length;
-                    
-                    // CASE 1: AUTO / LOOP AT END (Videos)
-                    if (slide.duration === -1 && isVideo) {
-                        const videoEl = container.querySelector('video');
-                        if(videoEl) {
-                            videoEl.onended = () => {
-                                index = nextIndex;
-                                runSlide();
-                            };
-                            // Fail-safe: if video fails to load/play, move on after 10s
-                            // setTimeout(() => { if(index !== nextIndex) runSlide(); }, 10000);
-                            return; // Stop here, wait for event
-                        }
-                    }
-
-                    // CASE 2: AUTO (Images/HTML - Default to 10s)
-                    let duration = slide.duration;
-                    if (duration === -1) duration = 10000; 
-
-                    // CASE 3: FOREVER (Do nothing)
-                    if (duration >= 9999990) return;
-
-                    // CASE 4: STANDARD TIMER
-                    index = nextIndex;
-                    playTimer = setTimeout(runSlide, duration);
+                    let dur = slide.duration === -1 ? 10000 : slide.duration;
+                    if (dur >= 9999990) return;
+                    index = (index + 1) % playlist.length;
+                    playTimer = setTimeout(runSlide, dur);
                 }
             };
-
             runSlide();
         }
     </script>
