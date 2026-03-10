@@ -1,0 +1,1 @@
+CreateObject("Wscript.Shell").Run "cmd /c node server/server.js > server_log.txt 2>&1", 0, False

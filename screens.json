@@ -1,50 +1,69 @@
 [
   {
-    "deviceId": "D_r7irqp",
-    "socketId": "L8FDtxMZsO_W963FAAAJ",
-    "pairingCode": "432416",
-    "name": "Desktop",
+    "deviceId": "D_4zexx4",
+    "socketId": "DzSBJu9lzu2JkxR3AAAd",
+    "pairingCode": "631569",
+    "name": "Esports 2",
     "isPaired": true,
     "lastContent": {
       "type": "playlist",
       "payload": [
         {
-          "type": "photo-text",
+          "type": "image",
           "content": {
-            "text": "",
-            "image": "",
-            "layout": "left"
+            "url": "/uploads/1773148044059-632598001.png",
+            "caption": "<p><br></p>"
           },
           "duration": 10000
         },
         {
           "type": "video",
           "content": {
-            "url": ""
+            "url": "/uploads/1773148087299-534895055.mp4"
           },
           "duration": 10000
         },
         {
-          "type": "scores",
+          "type": "image",
           "content": {
-            "title": "MJHS Rocket League Match 3",
-            "date": "02/06/2026",
-            "teams": [
+            "url": "/uploads/1773148313749-551483007.png",
+            "caption": "<p><br></p>"
+          },
+          "duration": 10000
+        },
+        {
+          "type": "weather",
+          "content": {
+            "days": [
               {
-                "name": "MJHS",
-                "score": "18"
+                "name": "Mon",
+                "icon": "☀️",
+                "high": "75",
+                "low": "55"
               },
               {
-                "name": "GCCMS",
-                "score": "12"
+                "name": "Tue",
+                "icon": "☁️",
+                "high": "76",
+                "low": "62"
               },
               {
-                "name": "",
-                "score": ""
+                "name": "Wed",
+                "icon": "🌧️",
+                "high": "68",
+                "low": "35"
               },
               {
-                "name": "",
-                "score": ""
+                "name": "Thur",
+                "icon": "☀️",
+                "high": "48",
+                "low": "32"
+              },
+              {
+                "name": "Fri",
+                "icon": "☁️",
+                "high": "58",
+                "low": "34"
               }
             ]
           },
@@ -52,5 +71,13 @@
         }
       ]
     }
+  },
+  {
+    "deviceId": "D_u8lufc",
+    "socketId": "4NUA24VOB1chy0yjAAAn",
+    "pairingCode": "851734",
+    "name": "Unpaired Screen",
+    "isPaired": false,
+    "lastContent": null
   }
 ]
