@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
-const multer = require('multer'); // NEW: Handles file uploads
+const multer = require('multer'); 
 
 const app = express();
 const server = http.createServer(app);
