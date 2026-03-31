@@ -3,7 +3,7 @@ title Esports Signage
 color 0A
 
 echo =================================================
-echo        STARTING Esports Signage SERVER
+echo        STARTING EasyWin Signage SERVER
 echo =================================================
 echo.
 echo [1/2] Booting Server Brain...
@@ -24,6 +24,6 @@ echo http://localhost:3000/dashboard.html
 echo.
 echo =================================================
 echo    DO NOT CLOSE THIS OR OTHER COMMAND PROMPT
-echo          WINDWOS WHILE SCREENS ARE ON
+echo          WINDOWS WHILE SCREENS ARE ON
 echo =================================================
 exit
