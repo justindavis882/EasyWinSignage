@@ -1,7 +1,7 @@
 {
-  "name": "esports-signage",
+  "name": "easywin-signage",
   "version": "1.0.0",
-  "description": "School Digital Signage System",
+  "description": "Digital Signage System",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js"
