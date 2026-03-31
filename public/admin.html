@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MJHS Studio</title>
+    <title>EasyWin Signage Studio</title>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -139,7 +139,7 @@
 <body>
 
     <header>
-        <div class="brand"><span>MJHS</span> STUDIO</div>
+        <div class="brand"><span>EasyWin Signage</span> Studio</div>
         <div style="display:flex; align-items:center;">
             <select id="screenSelect" style="width: 250px; background:#111; margin-right: 15px;" onchange="changeScreen(this.value)">
                 <option value="">-- Select a Screen to Edit --</option>
@@ -164,11 +164,11 @@
                 <button onclick="document.getElementById('cliModal').style.display='none'" style="background:none;border:none;color:#888;cursor:pointer;">✖</button>
             </div>
             <div class="terminal-body" id="cli-output">
-                Welcome to MJHS Admin CLI.
+                Welcome to the Admin CLI.
                 Type 'help' for available commands.
             </div>
             <div class="terminal-input-line">
-                <span class="terminal-prompt">admin@mjhs:~$</span>
+                <span class="terminal-prompt">admin@EasyWinSignage:~$</span>
                 <input type="text" id="cli-input" autocomplete="off" placeholder="Enter command...">
             </div>
         </div>
