@@ -2,6 +2,9 @@
 
 Easy Win Signage is a streamlined, plug-and-play digital signage system built on a compact Raspberry Pi console. Designed for absolute simplicity and versatility, every unit is capable of operating as both a **Player** (displaying content) and a **Creator** (managing and uploading content).
 
+<img src="header1.png" alt="First image" width="500"/>
+<img src="header2.png" alt="Second image" width="500"/>
+
 ## 📦 What's in the Box
 
 When you receive an Easy Win Signage system, you get everything needed for an immediate, self-contained setup:
